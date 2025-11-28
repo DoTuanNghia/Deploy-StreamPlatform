@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stream.backend.service.ChannelService;
 
 @RestController
-@RequestMapping("/api/")
+@RequestMapping("/api/channels")
 public class ChannelController {
     private final ChannelService channelService;
 
@@ -21,7 +21,7 @@ public class ChannelController {
         this.channelService = channelService;
     }
 
-    @GetMapping("/channels")
+    @GetMapping("/")
     public ResponseEntity<Map<String, Object>> getAllChannels() {
         var channels = channelService.getAllChannels();
 
@@ -32,7 +32,7 @@ public class ChannelController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/channels/user/{userId}")
+    @GetMapping("/user/{userId}")
     public ResponseEntity<Map<String, Object>> getChannelsByUserId(@PathVariable("userId") Integer userId) {
         var channels = channelService.getChannelsByUserId(userId);
 

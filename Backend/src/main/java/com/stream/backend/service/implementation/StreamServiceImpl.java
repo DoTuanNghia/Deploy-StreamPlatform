@@ -15,6 +15,7 @@ public class StreamServiceImpl implements StreamService{
         this.streamRepository = streamRepository;
     }
 
+    @Override
     public List<Stream> getStreamsByChannelId(Integer channelId){
         return streamRepository.findByChannelId(channelId);
     }
