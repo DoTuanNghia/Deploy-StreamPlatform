@@ -34,5 +34,6 @@ public class Channel {
 
     // 1 Channel có N Stream
     @OneToMany(mappedBy = "channel")
+    @JsonIgnore
     private List<Stream> streams;
 }
