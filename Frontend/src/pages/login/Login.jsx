@@ -1,26 +1,92 @@
-import { useState } from "react";
-import axiosClient from "../../api/axiosClient";
+// src/pages/login/login.jsx
+import React, { useState } from "react";
+import "./login.scss";
 
-export default function Login() {
-  const [username, setUser] = useState("");
-  const [password, setPwd] = useState("");
+const Login = () => {
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    remember: false,
+  });
 
-  const handleLogin = async () => {
-    try {
-      const res = await axiosClient.post("/auth/login", { username, password });
-      localStorage.setItem("token", res.token);
-      alert("Login thành công!");
-    } catch (err) {
-      alert("Sai thông tin đăng nhập!");
-    }
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // TODO: gọi API login ở đây (axiosClient...)
+    console.log("Login data:", form);
   };
 
   return (
-    <div>
-      <h1>Đăng nhập</h1>
-      <input placeholder="Username" onChange={(e) => setUser(e.target.value)} />
-      <input placeholder="Password" type="password" onChange={(e) => setPwd(e.target.value)} />
-      <button onClick={handleLogin}>Login</button>
+    <div className="login-page">
+      <div className="login-card">
+
+        <h2 className="login-card__title">Đăng nhập</h2>
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-form__field">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              placeholder="Nhập username"
+              value={form.username}
+              onChange={handleChange}
+              autoComplete="username"
+            />
+          </div>
+
+          <div className="login-form__field">
+            <label htmlFor="password">Mật khẩu</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Nhập mật khẩu"
+              value={form.password}
+              onChange={handleChange}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <div className="login-form__options">
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                name="remember"
+                checked={form.remember}
+                onChange={handleChange}
+              />
+              <span>Ghi nhớ đăng nhập</span>
+            </label>
+
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => alert("Tính năng quên mật khẩu đang xây dựng")}
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+
+          <button type="submit" className="btn btn--primary login-form__submit">
+            Đăng nhập
+          </button>
+        </form>
+
+        <p className="login-card__footer">
+          © {new Date().getFullYear()} Stream Platform. All rights reserved.
+        </p>
+      </div>
     </div>
   );
-}
+};
+
+export default Login;
