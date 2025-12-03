@@ -50,7 +50,7 @@ public class StreamSessionController {
 
     @GetMapping("/stream/{streamId}")
     public ResponseEntity<Map<String, Object>> getStreamSessionByStreamId(@PathVariable("streamId") Integer streamId) {
-        var streamSessions = streamSessionService.getStreamSessionsByDeviceId(streamId);
+        var streamSessions = streamSessionService.getStreamSessionsByStreamId(streamId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Welcome to Stream Platform Backend!");
