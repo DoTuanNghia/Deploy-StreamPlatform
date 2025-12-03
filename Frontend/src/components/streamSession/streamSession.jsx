@@ -31,19 +31,18 @@ const StreamSession = () => {
     setLoading(true);
     try {
       const data = await axiosClient.get("/stream-sessions");
-
-      // chỉ lấy session chưa STOPPED
-      const activeSessions = (data.streamSessions || []).filter(
-        (s) => s.status && s.status.toUpperCase() !== "STOPPED"
+      setSessions(
+        (data.streamSessions || []).filter(
+          (s) => s.status && s.status.toUpperCase() !== "STOPPED"
+        )
       );
-
-      setSessions(activeSessions);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchSessions();

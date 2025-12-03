@@ -85,12 +85,31 @@ const Stream = ({ channel }) => {
     }
   };
 
-  const handleStreamNow = (s) => {
-    console.log("Stream ngay:", s);
-    alert(
-      "Stream Ngay: sau này sẽ gọi API tạo StreamSession theo deviceId + streamId."
-    );
+  const handleStreamNow = async (stream) => {
+    if (!window.confirm(`Stream ngay luồng: "${stream.name}"?`)) return;
+
+    try {
+      const res = await axiosClient.post(
+        `/stream-sessions/start/${stream.id}`
+      );
+      console.log("Start stream response:", res);
+
+      alert(
+        res.message ||
+        `Đã bắt đầu stream trên máy ${res.deviceName || res.deviceId}.`
+      );
+
+      // Không cần setStreams, không xóa luồng; chỉ start session
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err?.response?.data?.message ||
+        "Không thể bắt đầu stream. Vui lòng thử lại.";
+      alert(msg);
+    }
   };
+
+
 
   if (!channel) {
     return (
@@ -98,7 +117,9 @@ const Stream = ({ channel }) => {
         <div className="card__header">
           <h2 className="card__title">Danh sách luồng của kênh đang chọn</h2>
         </div>
-        <p className="card__subtitle">Hãy chọn một kênh ở mục “Danh sách kênh”.</p>
+        <p className="card__subtitle">
+          Hãy chọn một kênh ở mục “Danh sách kênh”.
+        </p>
       </section>
     );
   }

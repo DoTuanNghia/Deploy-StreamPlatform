@@ -123,7 +123,7 @@ public class StreamSessionServiceImpl implements StreamSessionService {
         StreamSession session = new StreamSession();
         session.setStream(stream);
         session.setDevice(device);
-        session.setStatus("RUNNING");
+        session.setStatus("ACTIVE");
         session.setSpecification(stream.getName());
         // session.setTimeStart(LocalDateTime.now());
 
