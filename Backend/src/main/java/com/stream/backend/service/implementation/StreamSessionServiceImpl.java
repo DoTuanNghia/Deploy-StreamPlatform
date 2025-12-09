@@ -3,6 +3,7 @@ package com.stream.backend.service.implementation;
 import com.stream.backend.service.FfmpegService;
 
 import java.util.List;
+import java.util.Arrays;   
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,8 +51,8 @@ public class StreamSessionServiceImpl implements StreamSessionService {
 
     @Override
     public StreamSession creatStreamSession(StreamSession requestBody,
-            Integer deviceId,
-            Integer streamId) {
+                                            Integer deviceId,
+                                            Integer streamId) {
 
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("Device not found with id = " + deviceId));
@@ -146,17 +147,29 @@ public class StreamSessionServiceImpl implements StreamSessionService {
                 throw new RuntimeException("Stream key (keyStream) trống, không thể livestream.");
             }
 
+            // Lấy dòng đầu tiên KHÔNG RỖNG trong videoList (mỗi dòng 1 video)
+            String videoSource = null;
+            if (stream.getVideoList() != null && !stream.getVideoList().isBlank()) {
+                videoSource = Arrays.stream(stream.getVideoList().split("\\r?\\n"))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            // videoSource có thể là:
+            //  - đường dẫn local: C:\Videos\demo.mp4
+            //  - URL Google Drive (direct link): https://drive.google.com/uc?export=download&id=...
+            //  - URL HTTP khác
+            // Nếu videoSource == null => FfmpegService sẽ dùng demoVideo trong config
             ffmpegService.startStream(
-                    null, // videoPath: null => dùng demo video trong config
-                    null, // rtmpUrl: null => dùng youtubeRtmp trong config
-                    streamKey // stream key của YouTube
+                    videoSource,
+                    null,
+                    streamKey
             );
         } catch (Exception e) {
-            // Nếu muốn, có thể cập nhật status = ERROR
             System.err.println("Không thể khởi chạy FFmpeg cho streamId = " + streamId);
             e.printStackTrace();
-            // Tùy bạn: có thể throw để FE nhận lỗi, hoặc chỉ log
-            // throw new RuntimeException("Không thể bắt đầu FFmpeg", e);
         }
         return saved;
     }

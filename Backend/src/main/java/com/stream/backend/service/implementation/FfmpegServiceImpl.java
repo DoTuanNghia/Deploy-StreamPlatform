@@ -25,7 +25,7 @@ public class FfmpegServiceImpl implements FfmpegService {
 
     @Override
     public void startStream(String videoPath, String rtmpUrl, String streamKey) {
-        // Nếu không truyền videoPath thì dùng video demo trong config
+        // Nếu không truyền videoPath (hoặc rỗng) thì dùng video demo trong config
         if (videoPath == null || videoPath.isBlank()) {
             videoPath = demoVideoPath;
         }
@@ -47,7 +47,7 @@ public class FfmpegServiceImpl implements FfmpegService {
             cmd.add(ffmpegPath);
             cmd.add("-re");
             cmd.add("-i");
-            cmd.add(videoPath);
+            cmd.add(videoPath);    // <-- có thể là local path HOẶC URL
             cmd.add("-c:v");
             cmd.add("libx264");
             cmd.add("-preset");
