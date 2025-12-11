@@ -93,6 +93,17 @@ public class StreamSessionServiceImpl implements StreamSessionService {
     @Transactional
     public StreamSession stopStreamSession(StreamSession session) {
 
+        // 0. Dừng FFmpeg nếu đang chạy
+        try {
+            if (session != null && session.getStream() != null) {
+                String streamKey = session.getStream().getKeyStream();
+                ffmpegService.stopStream(streamKey);
+            }
+        } catch (Exception e) {
+            System.err.println("Không thể dừng FFmpeg cho sessionId = " + session.getId());
+            e.printStackTrace();
+        }
+
         // 1. Đổi trạng thái
         session.setStatus("STOPPED");
         streamSessionRepository.save(session);
