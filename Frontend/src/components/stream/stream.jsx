@@ -55,11 +55,16 @@ const Stream = ({ channel }) => {
       const payload = {
         name: form.note || "Stream mới",
         keyStream: form.keyLive,
+        // THÊM DÒNG NÀY
+        videoList: form.videoList && form.videoList.trim() !== ""
+          ? form.videoList
+          : null,
       };
 
       if (form.startDate && form.startTime) {
         payload.timeStart = `${form.startDate}T${form.startTime}:00`;
       }
+
       if (form.duration) {
         payload.duration = Number(form.duration);
       }
@@ -72,6 +77,7 @@ const Stream = ({ channel }) => {
       alert("Tạo luồng thất bại.");
     }
   };
+
 
   const handleDelete = async (id) => {
     if (!window.confirm("Xóa luồng này?")) return;
