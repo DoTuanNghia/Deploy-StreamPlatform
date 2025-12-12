@@ -218,4 +218,64 @@ public class StreamSessionServiceImpl implements StreamSessionService {
 
         return saved;
     }
+
+    @Override
+    @Transactional
+    public StreamSession startScheduledSession(Integer streamSessionId) {
+        StreamSession session = streamSessionRepository.findById(streamSessionId)
+                .orElseThrow(() -> new RuntimeException(
+                        "StreamSession not found with id = " + streamSessionId));
+
+        if (!"SCHEDULED".equalsIgnoreCase(session.getStatus())) {
+            throw new RuntimeException("StreamSession id=" + streamSessionId + " không ở trạng thái SCHEDULED");
+        }
+
+        Device device = session.getDevice();
+        if (device == null) {
+            throw new RuntimeException("StreamSession id=" + streamSessionId + " chưa gán device");
+        }
+
+        Stream stream = session.getStream();
+        if (stream == null) {
+            throw new RuntimeException("StreamSession id=" + streamSessionId + " chưa gán stream");
+        }
+
+        // 1. Cập nhật trạng thái session -> ACTIVE
+        session.setStatus("ACTIVE");
+        StreamSession saved = streamSessionRepository.save(session);
+
+        // 2. Tăng currentSession của device
+        int current = device.getCurrentSession() == null ? 0 : device.getCurrentSession();
+        device.setCurrentSession(current + 1);
+        deviceRepository.save(device);
+
+        // 3. Gọi FFmpeg giống logic startSessionForStream
+        try {
+            String streamKey = stream.getKeyStream();
+            if (streamKey == null || streamKey.isBlank()) {
+                throw new RuntimeException("Stream key (keyStream) trống, không thể livestream.");
+            }
+
+            String videoSource = null;
+            if (stream.getVideoList() != null && !stream.getVideoList().isBlank()) {
+                videoSource = Arrays.stream(stream.getVideoList().split("\\r?\\n"))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(this::normalizeVideoSource)
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            ffmpegService.startStream(
+                    videoSource,
+                    null,
+                    streamKey
+            );
+        } catch (Exception e) {
+            System.err.println("Không thể khởi chạy FFmpeg cho scheduled StreamSession id = " + streamSessionId);
+            e.printStackTrace();
+        }
+
+        return saved;
+    }
 }

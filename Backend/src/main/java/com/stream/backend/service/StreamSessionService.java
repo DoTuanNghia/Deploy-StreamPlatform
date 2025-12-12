@@ -20,4 +20,5 @@ public interface StreamSessionService {
 
     StreamSession startSessionForStream(Integer streamId);
 
+    StreamSession startScheduledSession(Integer streamSessionId);
 }
