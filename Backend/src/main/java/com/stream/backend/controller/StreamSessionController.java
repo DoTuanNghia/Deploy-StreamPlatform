@@ -1,27 +1,21 @@
 package com.stream.backend.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import com.stream.backend.entity.StreamSession;
 import com.stream.backend.service.StreamSessionService;
 import com.stream.backend.service.FfmpegService;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
 @RestController
 @RequestMapping("/api/stream-sessions")
 @CrossOrigin(origins = "http://localhost:5173")
 public class StreamSessionController {
+
     private final StreamSessionService streamSessionService;
     private final FfmpegService ffmpegService;
 
@@ -30,40 +24,101 @@ public class StreamSessionController {
         this.ffmpegService = ffmpegService;
     }
 
+    // =========================
+    // PAGING: ALL
+    // GET /api/stream-sessions?page=0&size=10&sort=id,desc
+    // =========================
     @GetMapping("")
-    public ResponseEntity<Map<String, Object>> getAllStreamSessions() {
-        var streamSessions = streamSessionService.getAllStreamSessions();
+    public ResponseEntity<Map<String, Object>> getAllStreamSessions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,desc") String sort
+    ) {
+        var pageData = streamSessionService.getAllStreamSessions(page, size, sort);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Welcome to Stream Platform Backend!");
-        response.put("streamSessions", streamSessions);
+        response.put("message", "StreamSessions fetched successfully");
+        response.put("streamSessions", pageData.getContent());
+        response.put("page", pageData.getNumber());
+        response.put("size", pageData.getSize());
+        response.put("totalElements", pageData.getTotalElements());
+        response.put("totalPages", pageData.getTotalPages());
+        response.put("last", pageData.isLast());
 
         return ResponseEntity.ok(response);
     }
 
+    // =========================
+    // PAGING: BY DEVICE
+    // =========================
     @GetMapping("/device/{deviceId}")
-    public ResponseEntity<Map<String, Object>> getStreamSessionByDeviceId(@PathVariable("deviceId") Integer deviceId) {
-        var streamSessions = streamSessionService.getStreamSessionsByDeviceId(deviceId);
+    public ResponseEntity<Map<String, Object>> getStreamSessionByDeviceId(
+            @PathVariable("deviceId") Integer deviceId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,desc") String sort
+    ) {
+        var pageData = streamSessionService.getStreamSessionsByDeviceId(deviceId, page, size, sort);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Welcome to Stream Platform Backend!");
-        response.put("streamSessions", streamSessions);
+        response.put("message", "StreamSessions fetched successfully");
+        response.put("deviceId", deviceId);
+        response.put("streamSessions", pageData.getContent());
+        response.put("page", pageData.getNumber());
+        response.put("size", pageData.getSize());
+        response.put("totalElements", pageData.getTotalElements());
+        response.put("totalPages", pageData.getTotalPages());
+        response.put("last", pageData.isLast());
 
         return ResponseEntity.ok(response);
     }
 
+    // =========================
+    // PAGING: BY STREAM
+    // =========================
     @GetMapping("/stream/{streamId}")
-    public ResponseEntity<Map<String, Object>> getStreamSessionByStreamId(@PathVariable("streamId") Integer streamId) {
-        var streamSessions = streamSessionService.getStreamSessionsByStreamId(streamId);
+    public ResponseEntity<Map<String, Object>> getStreamSessionByStreamId(
+            @PathVariable("streamId") Integer streamId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,desc") String sort
+    ) {
+        var pageData = streamSessionService.getStreamSessionsByStreamId(streamId, page, size, sort);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Welcome to Stream Platform Backend!");
-        response.put("streamSessions", streamSessions);
+        response.put("message", "StreamSessions fetched successfully");
+        response.put("streamId", streamId);
+        response.put("streamSessions", pageData.getContent());
+        response.put("page", pageData.getNumber());
+        response.put("size", pageData.getSize());
+        response.put("totalElements", pageData.getTotalElements());
+        response.put("totalPages", pageData.getTotalPages());
+        response.put("last", pageData.isLast());
 
         return ResponseEntity.ok(response);
     }
 
-    // NEW: lấy snapshot ffmpeg stat theo streamKey
+    // // =========================
+    // // OPTIMIZE: BY STREAM IDS
+    // // GET /api/stream-sessions/by-stream-ids?ids=1,2,3
+    // // =========================
+    // @GetMapping("/by-stream-ids")
+    // public ResponseEntity<Map<String, Object>> getByStreamIds(@RequestParam("ids") String ids) {
+    //     List<Integer> streamIds = Arrays.stream(ids.split(","))
+    //             .map(String::trim)
+    //             .filter(s -> !s.isEmpty())
+    //             .map(Integer::valueOf)
+    //             .collect(Collectors.toList());
+
+    //     List<StreamSession> sessions = streamSessionService.getStreamSessionsByStreamIds(streamIds);
+
+    //     Map<String, Object> response = new HashMap<>();
+    //     response.put("message", "StreamSessions fetched successfully");
+    //     response.put("streamSessions", sessions);
+    //     response.put("count", sessions.size());
+    //     return ResponseEntity.ok(response);
+    // }
+
     @GetMapping("/ffmpeg-stat/{streamKey}")
     public ResponseEntity<Map<String, Object>> getFfmpegStat(@PathVariable("streamKey") String streamKey) {
         Map<String, Object> response = new HashMap<>();
@@ -88,9 +143,7 @@ public class StreamSessionController {
     }
 
     @PostMapping("/start/{streamId}")
-    public ResponseEntity<Map<String, Object>> startStreamSession(
-            @PathVariable("streamId") Integer streamId) {
-
+    public ResponseEntity<Map<String, Object>> startStreamSession(@PathVariable("streamId") Integer streamId) {
         Map<String, Object> response = new HashMap<>();
         try {
             StreamSession started = streamSessionService.startSessionForStream(streamId);
@@ -108,8 +161,7 @@ public class StreamSessionController {
     }
 
     @PostMapping("/{streamSessionId}")
-    public ResponseEntity<Map<String, Object>> stopStreamSession(
-            @PathVariable("streamSessionId") Integer streamSessionId) {
+    public ResponseEntity<Map<String, Object>> stopStreamSession(@PathVariable("streamSessionId") Integer streamSessionId) {
 
         StreamSession streamSession = streamSessionService.getStreamSessionById(streamSessionId);
         var stopped = streamSessionService.stopStreamSession(streamSession);

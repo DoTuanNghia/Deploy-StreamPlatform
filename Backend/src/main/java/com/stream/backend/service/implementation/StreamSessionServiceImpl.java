@@ -11,6 +11,10 @@ import com.stream.backend.service.StreamSessionService;
 import com.stream.backend.youtube.YouTubeLiveService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -41,24 +45,61 @@ public class StreamSessionServiceImpl implements StreamSessionService {
         this.youTubeLiveService = youTubeLiveService;
     }
 
+    @Override
+    public Page<StreamSession> getAllStreamSessions(int page, int size, String sort) {
+        Pageable pageable = buildPageable(page, size, sort);
+        return streamSessionRepository.findByStatusIgnoreCase("ACTIVE", pageable);
+    }
+
+    @Override
+    public Page<StreamSession> getStreamSessionsByDeviceId(Integer deviceId, int page, int size, String sort) {
+        Pageable pageable = buildPageable(page, size, sort);
+        return streamSessionRepository.findByDeviceId(deviceId, pageable);
+    }
+
+    @Override
+    public Page<StreamSession> getStreamSessionsByStreamId(Integer streamId, int page, int size, String sort) {
+        Pageable pageable = buildPageable(page, size, sort);
+        return streamSessionRepository.findByStreamId(streamId, pageable);
+    }
+
+    private Pageable buildPageable(int page, int size, String sort) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 200);
+        Sort sortObj = parseSort(sort);
+        return PageRequest.of(safePage, safeSize, sortObj);
+    }
+
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.trim().isEmpty()) {
+            return Sort.by(Sort.Direction.DESC, "id");
+        }
+        try {
+            String[] parts = sort.split(",");
+            String field = parts[0].trim();
+            Sort.Direction dir = (parts.length > 1)
+                    ? Sort.Direction.fromString(parts[1].trim())
+                    : Sort.Direction.ASC;
+
+            if (!isAllowedSortField(field))
+                field = "id";
+            return Sort.by(dir, field);
+        } catch (Exception e) {
+            return Sort.by(Sort.Direction.DESC, "id");
+        }
+    }
+
+    private boolean isAllowedSortField(String field) {
+        // sort theo field Java của StreamSession
+        return "id".equals(field)
+                || "status".equals(field)
+                || "startedAt".equals(field)
+                || "stoppedAt".equals(field);
+    }
+
     // ==========================
     // QUERY
     // ==========================
-
-    @Override
-    public List<StreamSession> getAllStreamSessions() {
-        return streamSessionRepository.findAll();
-    }
-
-    @Override
-    public List<StreamSession> getStreamSessionsByDeviceId(Integer deviceId) {
-        return streamSessionRepository.findByDeviceId(deviceId);
-    }
-
-    @Override
-    public List<StreamSession> getStreamSessionsByStreamId(Integer streamId) {
-        return streamSessionRepository.findByStreamId(streamId);
-    }
 
     @Override
     public StreamSession getStreamSessionById(Integer streamSessionId) {
@@ -133,8 +174,8 @@ public class StreamSessionServiceImpl implements StreamSessionService {
         Stream stream = streamRepository.findById(streamId)
                 .orElseThrow(() -> new RuntimeException("Stream không tồn tại"));
 
-        List<StreamSession> list = streamSessionRepository.findByStreamId(streamId);
-        StreamSession session = list.isEmpty() ? null : list.get(0);
+        StreamSession session = streamSessionRepository.findFirstByStreamId(streamId)
+                .orElse(null);
 
         if (session != null && "ACTIVE".equalsIgnoreCase(session.getStatus())) {
             throw new RuntimeException("Stream đang ACTIVE, không thể Stream Ngay.");
@@ -269,9 +310,8 @@ public class StreamSessionServiceImpl implements StreamSessionService {
         Stream stream = streamRepository.findById(streamId)
                 .orElseThrow(() -> new RuntimeException("Stream not found with id = " + streamId));
 
-        // 1 Stream chỉ có 1 StreamSession (stream_id UNIQUE)
-        List<StreamSession> existing = streamSessionRepository.findByStreamId(streamId);
-        if (!existing.isEmpty()) {
+        // 1 Stream chỉ có 1 StreamSession (stream_id UNIQUE) -> check bằng exists
+        if (streamSessionRepository.existsByStreamId(streamId)) {
             throw new RuntimeException("This stream already has a StreamSession");
         }
 

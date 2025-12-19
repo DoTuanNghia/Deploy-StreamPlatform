@@ -69,13 +69,13 @@ const AddStream = ({ isOpen, onClose, onSave, channelId, initialData }) => {
 
         <form className="modal__body" onSubmit={handleSubmit}>
           <div className="modal__field">
-            <label>Ghi Chú</label>
+            <label>Tên luồng</label>
             <input
               type="text"
               name="note"
               value={form.note}
               onChange={handleChange}
-              placeholder="Nhập ghi chú cho luồng"
+              placeholder="Nhập tên luồng"
             />
           </div>
 

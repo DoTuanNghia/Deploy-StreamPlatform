@@ -4,6 +4,8 @@ import "./stream.scss";
 import AddStream from "./addStream/addStream.jsx";
 import axiosClient from "../../api/axiosClient";
 
+const PAGE_SIZE = 10;
+
 const formatTime = (iso) => {
   if (!iso) return "none";
   const d = new Date(iso);
@@ -23,10 +25,18 @@ const Stream = ({ channel }) => {
   const [error, setError] = useState("");
   const [editingStream, setEditingStream] = useState(null);
 
-  const fetchStreams = async () => {
+  // Pagination (UI: 1-based)
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
+  const fetchStreams = async (pageNumber = page) => {
     if (!channel?.id) {
       setStreams([]);
       setStreamStatusMap({});
+      setPage(1);
+      setTotalPages(1);
+      setTotalElements(0);
       return;
     }
 
@@ -34,13 +44,26 @@ const Stream = ({ channel }) => {
     setError("");
 
     try {
+      const bePage = Math.max(0, pageNumber - 1);
+
       const [streamRes, sessionRes] = await Promise.all([
-        axiosClient.get(`/streams/channel/${channel.id}`),
+        axiosClient.get(`/streams/channel/${channel.id}`, {
+          params: { page: bePage, size: PAGE_SIZE, sort: "timeStart,desc" },
+        }),
         axiosClient.get(`/stream-sessions`),
       ]);
 
       const list = streamRes.streams || [];
+      const tp = Number(streamRes.totalPages ?? 1) || 1;
+      const te = Number(streamRes.totalElements ?? 0) || 0;
+
+      // Nếu sau khi xóa mà trang hiện tại vượt quá totalPages, tự lùi về trang cuối
+      const safePageNumber = Math.min(Math.max(1, pageNumber), tp);
+
       setStreams(list);
+      setTotalPages(tp);
+      setTotalElements(te);
+      setPage(safePageNumber);
 
       const sessions = sessionRes.streamSessions || [];
       const map = {};
@@ -55,6 +78,8 @@ const Stream = ({ channel }) => {
       if (err.response?.status === 404) {
         setStreams([]);
         setStreamStatusMap({});
+        setTotalPages(1);
+        setTotalElements(0);
         setError("Kênh này chưa có luồng nào.");
       } else {
         setError("Không tải được danh sách luồng.");
@@ -65,8 +90,17 @@ const Stream = ({ channel }) => {
   };
 
   useEffect(() => {
-    fetchStreams();
+    // đổi kênh -> về trang 1
+    setPage(1);
+    fetchStreams(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel?.id]);
+
+  const gotoPage = async (p) => {
+    const next = Math.min(Math.max(1, p), totalPages);
+    if (next === page) return;
+    await fetchStreams(next);
+  };
 
   // Thêm / Sửa stream dùng chung 1 hàm
   const handleSaveStream = async (form) => {
@@ -88,7 +122,7 @@ const Stream = ({ channel }) => {
         payload.timeStart = null;
       }
 
-      // duration: cho phép -1 (vô hạn). Không dùng if(form.duration) vì -1 là truthy nhưng "" là falsy, cần xử lý rõ
+      // duration: cho phép -1 (vô hạn)
       if (
         form.duration !== undefined &&
         form.duration !== null &&
@@ -105,7 +139,7 @@ const Stream = ({ channel }) => {
         await axiosClient.post(`/streams/channel/${channel.id}`, payload);
       }
 
-      await fetchStreams();
+      await fetchStreams(page);
       setIsAddOpen(false);
       setEditingStream(null);
     } catch (err) {
@@ -118,7 +152,7 @@ const Stream = ({ channel }) => {
     if (!window.confirm("Xóa luồng này?")) return;
     try {
       await axiosClient.delete(`/streams/${id}`);
-      await fetchStreams();
+      await fetchStreams(page);
     } catch (err) {
       console.error(err);
       alert("Xóa luồng thất bại.");
@@ -126,10 +160,10 @@ const Stream = ({ channel }) => {
   };
 
   const handleStreamNow = async (stream) => {
-    // chỉ chặn khi ACTIVE (đúng theo yêu cầu)
+    // chỉ chặn khi ACTIVE hoặc STOPPED (theo logic hiện tại của bạn)
     const stt = streamStatusMap[stream.id];
-    if (stt === "ACTIVE") {
-      alert("Luồng đang được stream (ACTIVE), không thể Stream Ngay.");
+    if (stt === "ACTIVE" || stt === "STOPPED") {
+      alert("Luồng không thể Stream Ngay.");
       return;
     }
 
@@ -144,8 +178,7 @@ const Stream = ({ channel }) => {
           `Đã bắt đầu stream trên máy ${res.deviceName || res.deviceId}.`
       );
 
-      // refresh để nút bị disable ngay khi chuyển ACTIVE
-      await fetchStreams();
+      await fetchStreams(page);
     } catch (err) {
       console.error(err);
       const msg =
@@ -203,12 +236,39 @@ const Stream = ({ channel }) => {
           <p className="card__subtitle card__subtitle--error">{error}</p>
         )}
 
+        {/* Pagination toolbar */}
+        {!loading && totalElements > 0 && (
+          <div className="table__toolbar">
+            <div className="table__pagination">
+              {/* <button
+                className="btn btn--ghost"
+                onClick={() => gotoPage(page - 1)}
+                disabled={page <= 1}
+              >
+                Prev
+              </button> */}
+
+              <span className="table__pageinfo">
+                Tổng{" "}: <strong>{totalElements}</strong> luồng
+              </span>
+
+              {/* <button
+                className="btn btn--ghost"
+                onClick={() => gotoPage(page + 1)}
+                disabled={page >= totalPages}
+              >
+                Next
+              </button> */}
+            </div>
+          </div>
+        )}
+
         <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
                 <th>STT</th>
-                <th>Ghi chú</th>
+                <th>Tên luồng</th>
                 <th>Hẹn giờ</th>
                 <th>Thời gian stream</th>
                 <th>Key live</th>
@@ -233,7 +293,8 @@ const Stream = ({ channel }) => {
 
                   return (
                     <tr key={st.id}>
-                      <td>{index + 1}</td>
+                      {/* STT theo toàn cục */}
+                      <td>{(page - 1) * PAGE_SIZE + index + 1}</td>
                       <td>{st.name}</td>
                       <td>{formatTime(st.timeStart)}</td>
                       <td>
@@ -282,6 +343,45 @@ const Stream = ({ channel }) => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination toolbar bottom (optional) */}
+        {!loading && totalElements > 0 && (
+          <div className="table__toolbar table__toolbar--bottom">
+            <div className="table__pagination">
+              <button
+                className="btn btn--ghost"
+                onClick={() => gotoPage(1)}
+                disabled={page <= 1}
+              >
+                First
+              </button>
+              <button
+                className="btn btn--ghost"
+                onClick={() => gotoPage(page - 1)}
+                disabled={page <= 1}
+              >
+                Prev
+              </button>
+              <span className="table__pageinfo">
+                <strong>{page}</strong> / {totalPages}
+              </span>
+              <button
+                className="btn btn--ghost"
+                onClick={() => gotoPage(page + 1)}
+                disabled={page >= totalPages}
+              >
+                Next
+              </button>
+              <button
+                className="btn btn--ghost"
+                onClick={() => gotoPage(totalPages)}
+                disabled={page >= totalPages}
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <AddStream
