@@ -148,7 +148,7 @@ const AddStream = ({ isOpen, onClose, onSave, channelId, initialData }) => {
               name="duration"
               value={form.duration}
               onChange={handleChange}
-              min={0}
+              min={-1}
             />
           </div>
 
