@@ -38,7 +38,6 @@ const Home = ({ onLogout }) => {
 
   return (
     <div className="layout">
-      {/* ✅ truyền onLogout xuống Header */}
       <Header onLogout={onLogout} />
 
       <div className="layout__body">

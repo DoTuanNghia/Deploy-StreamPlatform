@@ -1,47 +1,69 @@
-// src/components/user/header/header.jsx (hoặc đúng path bạn đang dùng)
-import React, { useState } from "react";
+// src/components/user/header/header.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import "./Header.scss";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
+const getCurrentUser = () => {
+  try {
+    const raw =
+      localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser");
+    return JSON.parse(raw || "null");
+  } catch {
+    return null;
+  }
+};
 
 const Header = ({ onLogout }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [openMenu, setOpenMenu] = useState(false);
+  const [user, setUser] = useState(getCurrentUser());
 
-  const getCurrentUser = () => {
-    try {
-      const raw =
-        localStorage.getItem("currentUser") ||
-        sessionStorage.getItem("currentUser");
-      return JSON.parse(raw || "null");
-    } catch {
-      return null;
-    }
-  };
+  // ✅ đổi route thì sync lại user (tránh stale)
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, [location.pathname]);
 
-  const user = getCurrentUser();
+  const role = useMemo(() => {
+    const roleRaw = user?.role ?? user?.type ?? "";
+    return String(roleRaw).trim().toUpperCase();
+  }, [user]);
 
-  const handleLogout = () => {
-    // ✅ QUAN TRỌNG: báo cho App đổi state isLoggedIn = false
-    if (typeof onLogout === "function") onLogout();
-    else {
-      // fallback an toàn nếu quên truyền prop
-      localStorage.removeItem("currentUser");
-      sessionStorage.removeItem("currentUser");
-    }
-    navigate("/login", { replace: true });
-  };
+  const isAdmin = role === "ADMIN" || role === "ROLE_ADMIN";
 
-  const toggleMenu = () => setOpenMenu((prev) => !prev);
-
-  const displayName = user?.name || user?.username || "User";
-  const displayRole = user?.role || "Role";
+  const displayName = user?.fullName || user?.name || user?.username || "User";
+  const displayRole = role || "USER";
 
   const initials = displayName
     .split(" ")
     .filter(Boolean)
+    .slice(0, 2)
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+
+  const toggleMenu = () => {
+    setUser(getCurrentUser());
+    setOpenMenu((p) => !p);
+  };
+
+  const handleLogout = () => {
+    // gọi callback nếu có, còn không thì tự xoá storage
+    if (typeof onLogout === "function") {
+      onLogout();
+    } else {
+      localStorage.removeItem("currentUser");
+      sessionStorage.removeItem("currentUser");
+    }
+    setOpenMenu(false);
+    navigate("/login", { replace: true });
+  };
+
+  const handleGoAdmin = () => {
+    setOpenMenu(false);
+    navigate("/admin", { replace: true });
+  };
 
   return (
     <header className="header">
@@ -53,7 +75,7 @@ const Header = ({ onLogout }) => {
       </div>
 
       <div className="header__right">
-        <button className="header__icon-btn" title="Thông báo">
+        <button className="header__icon-btn" title="Thông báo" type="button">
           🔔
           <span className="header__badge">3</span>
         </button>
@@ -70,7 +92,21 @@ const Header = ({ onLogout }) => {
 
           {openMenu && (
             <div className="header__dropdown">
-              <button onClick={handleLogout} className="header__dropdown-item">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleGoAdmin}
+                  className="header__dropdown-item"
+                >
+                  Quản lý
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="header__dropdown-item header__dropdown-item--danger"
+              >
                 Đăng xuất
               </button>
             </div>

@@ -10,9 +10,11 @@
 
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 1000;        /* ✅ tăng để đè lên content */
+  overflow: visible;    /* ✅ tránh bị cắt dropdown */
 }
 
+/* Title */
 .admin-header__title {
   display: flex;
   align-items: center;
@@ -42,6 +44,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  overflow: visible; /* ✅ */
 }
 
 /* User pill */
@@ -49,12 +52,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
+
   background: #020617;
   border-radius: 999px;
   padding: 4px 8px 4px 12px;
   border: 1px solid #1f2937;
-  position: relative;
+
+  position: relative; /* ✅ dropdown bám theo */
   cursor: pointer;
+
+  overflow: visible;  /* ✅ tránh cắt dropdown */
 
   &:hover {
     border-color: #4b5563;
@@ -96,35 +103,53 @@
 /* Dropdown */
 .admin-header__dropdown {
   position: absolute;
-  top: 48px;
+  top: calc(100% + 8px); /* ✅ đặt dưới pill */
   right: 0;
+
+  min-width: 190px;
+  padding: 10px;
+
+  display: flex;          /* ✅ để xếp dọc nhiều nút */
+  flex-direction: column;
+  gap: 8px;
+
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 12px;
-  min-width: 160px;
-  padding: 4px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-  z-index: 100;
-  overflow: hidden;
+
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+
+  z-index: 9999;          /* ✅ luôn nổi lên */
+  overflow: visible;      /* ✅ không cắt nút */
 }
 
+/* Items */
 .admin-header__dropdown-item {
-  display: block;
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 16px;
-  text-align: center;
+
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+
+  cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+
   background: #ffffff;
   color: #0f172a;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  margin: 0;
-  border-radius: 8px;
-  font-weight: 600;
 
   &:hover {
     background: #e2e8f0;
+  }
+}
+
+.admin-header__dropdown-item--danger {
+  background: #fee2e2;
+  color: #991b1b;
+
+  &:hover {
+    background: #fecaca;
   }
 }
