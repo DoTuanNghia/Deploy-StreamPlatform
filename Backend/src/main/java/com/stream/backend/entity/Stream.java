@@ -1,8 +1,10 @@
 package com.stream.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,17 +27,34 @@ public class Stream {
     private String keyStream;
 
     @Column(name = "timeStart")
-    private LocalDateTime timeStart;   // map với DATETIME
+    private LocalDateTime timeStart;
 
     @Column
-    private Integer duration;          // phút / giây tuỳ bạn quy ước
+    private Integer duration;
+
+    @Column(name = "video_list", columnDefinition = "TEXT")
+    private String videoList;
+
+    @Column(name = "yt_broadcast_id")
+    private String youtubeBroadcastId;
+
+    @Column(name = "yt_stream_id")
+    private String youtubeStreamId;
+
+    @Column(name = "auto_start")
+    private Boolean autoStart = true;
+
+    @Column(name = "auto_stop")
+    private Boolean autoStop = true;
 
     // 1 Channel có N Stream
     @ManyToOne
     @JoinColumn(name = "channel_id", nullable = false)
+    @JsonBackReference
     private Channel channel;
 
-    // 1 Stream có 1 StreamSession
+    // StreamSession bạn có thể giữ nguyên
     @OneToOne(mappedBy = "stream")
+    @JsonIgnore
     private StreamSession streamSession;
 }
